@@ -18,11 +18,11 @@ type AnalysisMode = "analyze" | "names" | "content" | "ebook";
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   const [idea, setIdea] = useState("");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [history, setHistory] = useState<BusinessIdea[]>([]);
   const [mode, setMode] = useState<AnalysisMode>("analyze");
 
@@ -67,32 +67,46 @@ export default function Home() {
     }
   }, [user]);
 
-  const signUp = async () => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
+  const loginWithGoogle = async () => {
+    setAuthLoading(true);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
+
+    setAuthLoading(false);
 
     if (error) {
       alert(error.message);
-      return;
     }
-
-    alert("Account created! You can log in now.");
   };
 
-  const login = async () => {
-    const { error } = await supabase.auth.signInWithPassword({
+  const loginWithEmailMagicLink = async () => {
+    if (!email.trim()) {
+      alert("Please enter your email first");
+      return;
+    }
+
+    setAuthLoading(true);
+
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
     });
+
+    setAuthLoading(false);
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    alert("Logged in!");
+    alert("Magic link sent! Please check your email.");
   };
 
   const logout = async () => {
@@ -283,41 +297,46 @@ export default function Home() {
 
         {!user && (
           <div className="mt-10 w-full max-w-md rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6">
-            <h2 className="mb-4 text-xl font-bold text-pink-300">
+            <h2 className="mb-2 text-xl font-bold text-pink-300">
               Login / Create Account
             </h2>
+
+            <p className="mb-5 text-sm leading-6 text-gray-400">
+              No password needed. Continue with Google or get a magic link sent
+              to your email.
+            </p>
+
+            <button
+              onClick={loginWithGoogle}
+              disabled={authLoading}
+              className="mb-4 w-full rounded-xl bg-white p-3 font-bold text-[#1f1f1f] hover:bg-gray-100 disabled:opacity-50"
+            >
+              {authLoading ? "Loading..." : "Continue with Google"}
+            </button>
+
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-pink-500/20" />
+              <span className="text-xs font-bold uppercase tracking-wide text-pink-300">
+                or
+              </span>
+              <div className="h-px flex-1 bg-pink-500/20" />
+            </div>
 
             <input
               type="email"
               placeholder="Email"
-              className="mb-3 w-full rounded-xl border border-pink-500 bg-[#1a1a1a] p-3 text-white"
+              className="mb-3 w-full rounded-xl border border-pink-500 bg-[#1a1a1a] p-3 text-white outline-none placeholder:text-gray-500 focus:border-pink-300"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
 
-            <input
-              type="password"
-              placeholder="Password"
-              className="mb-4 w-full rounded-xl border border-pink-500 bg-[#1a1a1a] p-3 text-white"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={login}
-                className="rounded-xl bg-pink-500 p-3 font-bold text-white"
-              >
-                Login
-              </button>
-
-              <button
-                onClick={signUp}
-                className="rounded-xl border border-pink-500 p-3 font-bold text-pink-300"
-              >
-                Sign Up
-              </button>
-            </div>
+            <button
+              onClick={loginWithEmailMagicLink}
+              disabled={authLoading}
+              className="w-full rounded-xl bg-pink-500 p-3 font-bold text-white shadow-lg shadow-pink-500/20 hover:bg-pink-400 disabled:opacity-50"
+            >
+              {authLoading ? "Sending..." : "Send Magic Link"}
+            </button>
           </div>
         )}
 
