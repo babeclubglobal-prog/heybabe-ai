@@ -13,6 +13,14 @@ type BusinessIdea = {
   created_at: string;
 };
 
+type Project = {
+  id: string;
+  user_id: string;
+  project_name: string;
+  project_type: string | null;
+  created_at: string;
+};
+
 type AnalysisMode = "analyze" | "names" | "content" | "ebook";
 
 export default function Home() {
@@ -23,7 +31,14 @@ export default function Home() {
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+
   const [history, setHistory] = useState<BusinessIdea[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  const [projectName, setProjectName] = useState("");
+  const [projectType, setProjectType] = useState("Dropshipping");
+  const [projectLoading, setProjectLoading] = useState(false);
+
   const [mode, setMode] = useState<AnalysisMode>("analyze");
 
   const loadHistory = async () => {
@@ -37,6 +52,24 @@ export default function Home() {
 
     if (!error && data) {
       setHistory(data as BusinessIdea[]);
+    }
+  };
+
+  const loadProjects = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id, user_id, project_name, project_type, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (data) {
+      setProjects(data as Project[]);
     }
   };
 
@@ -62,8 +95,10 @@ export default function Home() {
   useEffect(() => {
     if (user) {
       loadHistory();
+      loadProjects();
     } else {
       setHistory([]);
+      setProjects([]);
     }
   }, [user]);
 
@@ -114,6 +149,54 @@ export default function Home() {
     setResult("");
     setIdea("");
     setHistory([]);
+    setProjects([]);
+  };
+
+  const createProject = async () => {
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
+
+    if (!projectName.trim()) {
+      alert("Please enter a project name");
+      return;
+    }
+
+    setProjectLoading(true);
+
+    const { error } = await supabase.from("projects").insert([
+      {
+        project_name: projectName,
+        project_type: projectType,
+        user_id: user.id,
+      },
+    ]);
+
+    setProjectLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setProjectName("");
+    setProjectType("Dropshipping");
+    await loadProjects();
+  };
+
+  const deleteProject = async (id: string) => {
+    const confirmDelete = confirm("Delete this project?");
+    if (!confirmDelete) return;
+
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadProjects();
   };
 
   const downloadPDF = () => {
@@ -265,36 +348,6 @@ export default function Home() {
           content strategy, business validation, and step-by-step action plans.
         </p>
 
-        <div className="mt-8 grid w-full max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-pink-500/20 bg-[#1f1f1f] px-5 py-4 shadow-sm">
-            <div className="text-2xl">🔍</div>
-            <div className="mt-2 text-sm font-bold text-white">
-              Product Research
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-pink-500/20 bg-[#1f1f1f] px-5 py-4 shadow-sm">
-            <div className="text-2xl">📈</div>
-            <div className="mt-2 text-sm font-bold text-white">
-              Market Validation
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-pink-500/20 bg-[#1f1f1f] px-5 py-4 shadow-sm">
-            <div className="text-2xl">📱</div>
-            <div className="mt-2 text-sm font-bold text-white">
-              Content Strategy
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-pink-500/20 bg-[#1f1f1f] px-5 py-4 shadow-sm">
-            <div className="text-2xl">🚀</div>
-            <div className="mt-2 text-sm font-bold text-white">
-              Launch Roadmap
-            </div>
-          </div>
-        </div>
-
         {!user && (
           <div className="mt-10 w-full max-w-md rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6">
             <h2 className="mb-2 text-xl font-bold text-pink-300">
@@ -342,6 +395,99 @@ export default function Home() {
 
         {user && (
           <>
+            <div className="mt-10 grid w-full max-w-5xl gap-5 md:grid-cols-3">
+              <div className="rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6 text-left">
+                <p className="text-sm text-gray-400">Total Projects</p>
+                <h3 className="mt-2 text-4xl font-black text-pink-300">
+                  {projects.length}
+                </h3>
+              </div>
+
+              <div className="rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6 text-left">
+                <p className="text-sm text-gray-400">Recent Analyses</p>
+                <h3 className="mt-2 text-4xl font-black text-pink-300">
+                  {history.length}
+                </h3>
+              </div>
+
+              <div className="rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6 text-left">
+                <p className="text-sm text-gray-400">Plan</p>
+                <h3 className="mt-2 text-4xl font-black text-pink-300">
+                  Free
+                </h3>
+              </div>
+            </div>
+
+            <div className="mt-8 w-full max-w-4xl rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6 text-left">
+              <h2 className="mb-4 text-xl font-bold text-pink-300">
+                + New Project
+              </h2>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <input
+                  type="text"
+                  placeholder="Project name"
+                  className="rounded-xl border border-pink-500 bg-[#1a1a1a] p-3 text-white outline-none placeholder:text-gray-500 focus:border-pink-300"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                />
+
+                <select
+                  className="rounded-xl border border-pink-500 bg-[#1a1a1a] p-3 text-white outline-none focus:border-pink-300"
+                  value={projectType}
+                  onChange={(e) => setProjectType(e.target.value)}
+                >
+                  <option>Dropshipping</option>
+                  <option>Digital Products</option>
+                  <option>Print On Demand</option>
+                  <option>Affiliate Marketing</option>
+                  <option>AI Agency</option>
+                  <option>Personal Brand</option>
+                </select>
+
+                <button
+                  onClick={createProject}
+                  disabled={projectLoading}
+                  className="rounded-xl bg-pink-500 p-3 font-bold text-white shadow-lg shadow-pink-500/20 hover:bg-pink-400 disabled:opacity-50"
+                >
+                  {projectLoading ? "Creating..." : "Create Project"}
+                </button>
+              </div>
+            </div>
+
+            {projects.length > 0 && (
+              <div className="mt-6 w-full max-w-4xl rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6 text-left">
+                <h2 className="mb-4 text-xl font-bold text-pink-300">
+                  My Projects
+                </h2>
+
+                <div className="space-y-3">
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl bg-black/30 px-5 py-4"
+                    >
+                      <div>
+                        <h3 className="font-bold text-white">
+                          {project.project_name}
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          {project.project_type || "No type"}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => deleteProject(project.id)}
+                        className="text-xs font-bold text-red-400 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-10 w-full max-w-3xl">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                 {[
@@ -476,55 +622,6 @@ export default function Home() {
             )}
           </>
         )}
-
-        <p className="mt-8 text-xl font-semibold text-pink-200">
-          Your AI Business Co-Founder
-        </p>
-
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <a
-            href="#"
-            className="rounded-full bg-[#f48fba] px-8 py-4 text-base font-bold text-white shadow-lg shadow-pink-200 hover:bg-[#e875a7]"
-          >
-            Start Building
-          </a>
-
-          <a
-            href="#"
-            className="rounded-full border border-[#f2bfd5] bg-white/80 px-8 py-4 text-base font-bold text-[#c75b8c] shadow-sm hover:bg-white"
-          >
-            See How It Works
-          </a>
-        </div>
-
-        <div className="mt-16 grid max-w-5xl gap-5 sm:grid-cols-3">
-          <div className="rounded-[2rem] border border-pink-500/20 bg-[#1f1f1f] p-7 text-left shadow-sm">
-            <div className="mb-4 text-3xl">🔍</div>
-            <h3 className="text-lg font-bold">Product Research</h3>
-            <p className="mt-3 text-sm leading-6 text-[#7d5b6b]">
-              Discover product ideas with real business potential before you
-              waste time building the wrong thing.
-            </p>
-          </div>
-
-          <div className="rounded-[2rem] border border-pink-500/20 bg-[#1f1f1f] p-7 text-left shadow-sm">
-            <div className="mb-4 text-3xl">✨</div>
-            <h3 className="text-lg font-bold">Content Creation</h3>
-            <p className="mt-3 text-sm leading-6 text-[#7d5b6b]">
-              Generate hooks, captions, product descriptions, and launch posts
-              based on your business idea.
-            </p>
-          </div>
-
-          <div className="rounded-[2rem] border border-pink-500/20 bg-[#1f1f1f] p-7 text-left shadow-sm">
-            <div className="mb-4 text-3xl">🗺️</div>
-            <h3 className="text-lg font-bold">Action Plan</h3>
-            <p className="mt-3 text-sm leading-6 text-[#7d5b6b]">
-              Get clear next steps so you always know what to do next to start
-              selling.
-            </p>
-          </div>
-        </div>
       </section>
     </main>
   );
