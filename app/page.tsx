@@ -43,6 +43,11 @@ export default function Home() {
 
   const [mode, setMode] = useState<AnalysisMode>("analyze");
 
+  const filteredHistory =
+    selectedProjectId === ""
+      ? history
+      : history.filter((item) => item.project_id === selectedProjectId);
+
   const getProjectName = (projectId: string | null) => {
     if (!projectId) return "No project";
     return (
@@ -58,7 +63,7 @@ export default function Home() {
       .from("business_ideas")
       .select("id, idea, result, created_at, project_id")
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(20);
 
     if (!error && data) {
       setHistory(data as BusinessIdea[]);
@@ -446,7 +451,7 @@ export default function Home() {
               <div className="rounded-3xl border border-pink-500/20 bg-[#1f1f1f] p-6 text-left">
                 <p className="text-sm text-gray-400">Recent Analyses</p>
                 <h3 className="mt-2 text-4xl font-black text-pink-300">
-                  {history.length}
+                  {filteredHistory.length}
                 </h3>
               </div>
 
@@ -547,7 +552,7 @@ export default function Home() {
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
                   >
-                    <option value="">Choose a project</option>
+                    <option value="">All Projects</option>
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
                         {project.project_name} —{" "}
@@ -596,14 +601,16 @@ export default function Home() {
               </button>
             </div>
 
-            {history.length > 0 && (
+            {filteredHistory.length > 0 && (
               <div className="mt-6 w-full max-w-xl rounded-2xl border border-pink-500/20 bg-[#1f1f1f] p-5 text-left">
                 <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-pink-300">
-                  Recent Analyses
+                  {selectedProjectId
+                    ? `Analyses For ${getProjectName(selectedProjectId)}`
+                    : "Recent Analyses"}
                 </h2>
 
                 <div className="space-y-2">
-                  {history.map((item) => (
+                  {filteredHistory.map((item) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between gap-3 rounded-xl bg-black/30 px-4 py-3"
@@ -698,3 +705,4 @@ export default function Home() {
     </main>
   );
 }
+
