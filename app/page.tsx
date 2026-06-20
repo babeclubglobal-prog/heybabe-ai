@@ -63,7 +63,7 @@ export default function Home() {
       .from("business_ideas")
       .select("id, idea, result, created_at, project_id")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(5);
 
     if (!error && data) {
       setHistory(data as BusinessIdea[]);
@@ -552,7 +552,7 @@ export default function Home() {
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
                   >
-                    <option value="">All Projects</option>
+                    <option value="">Choose a project</option>
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
                         {project.project_name} —{" "}
@@ -701,6 +701,55 @@ export default function Home() {
             )}
           </>
         )}
+
+        <p className="mt-8 text-xl font-semibold text-pink-200">
+          Your AI Business Co-Founder
+        </p>
+
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+          <a
+            href="#"
+            className="rounded-full bg-[#f48fba] px-8 py-4 text-base font-bold text-white shadow-lg shadow-pink-200 hover:bg-[#e875a7]"
+          >
+            Start Building
+          </a>
+
+          <a
+            href="#"
+            className="rounded-full border border-[#f2bfd5] bg-white/80 px-8 py-4 text-base font-bold text-[#c75b8c] shadow-sm hover:bg-white"
+          >
+            See How It Works
+          </a>
+        </div>
+
+        <div className="mt-16 grid max-w-5xl gap-5 sm:grid-cols-3">
+          <div className="rounded-[2rem] border border-pink-500/20 bg-[#1f1f1f] p-7 text-left shadow-sm">
+            <div className="mb-4 text-3xl">🔍</div>
+            <h3 className="text-lg font-bold">Product Research</h3>
+            <p className="mt-3 text-sm leading-6 text-[#7d5b6b]">
+              Discover product ideas with real business potential before you
+              waste time building the wrong thing.
+            </p>
+          </div>
+
+          <div className="rounded-[2rem] border border-pink-500/20 bg-[#1f1f1f] p-7 text-left shadow-sm">
+            <div className="mb-4 text-3xl">✨</div>
+            <h3 className="text-lg font-bold">Content Creation</h3>
+            <p className="mt-3 text-sm leading-6 text-[#7d5b6b]">
+              Generate hooks, captions, product descriptions, and launch posts
+              based on your business idea.
+            </p>
+          </div>
+
+          <div className="rounded-[2rem] border border-pink-500/20 bg-[#1f1f1f] p-7 text-left shadow-sm">
+            <div className="mb-4 text-3xl">🗺️</div>
+            <h3 className="text-lg font-bold">Action Plan</h3>
+            <p className="mt-3 text-sm leading-6 text-[#7d5b6b]">
+              Get clear next steps so you always know what to do next to start
+              selling.
+            </p>
+          </div>
+        </div>
       </section>
     </main>
   );
