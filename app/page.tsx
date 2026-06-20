@@ -11,6 +11,7 @@ type BusinessIdea = {
   idea: string;
   result: string | null;
   created_at: string;
+  project_id: string | null;
 };
 
 type Project = {
@@ -34,6 +35,7 @@ export default function Home() {
 
   const [history, setHistory] = useState<BusinessIdea[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
 
   const [projectName, setProjectName] = useState("");
   const [projectType, setProjectType] = useState("Dropshipping");
@@ -41,12 +43,20 @@ export default function Home() {
 
   const [mode, setMode] = useState<AnalysisMode>("analyze");
 
+  const getProjectName = (projectId: string | null) => {
+    if (!projectId) return "No project";
+    return (
+      projects.find((project) => project.id === projectId)?.project_name ||
+      "Unknown project"
+    );
+  };
+
   const loadHistory = async () => {
     if (!user) return;
 
     const { data, error } = await supabase
       .from("business_ideas")
-      .select("id, idea, result, created_at")
+      .select("id, idea, result, created_at, project_id")
       .order("created_at", { ascending: false })
       .limit(5);
 
@@ -70,6 +80,10 @@ export default function Home() {
 
     if (data) {
       setProjects(data as Project[]);
+
+      if (data.length > 0 && !selectedProjectId) {
+        setSelectedProjectId(data[0].id);
+      }
     }
   };
 
@@ -99,6 +113,7 @@ export default function Home() {
     } else {
       setHistory([]);
       setProjects([]);
+      setSelectedProjectId("");
     }
   }, [user]);
 
@@ -150,6 +165,7 @@ export default function Home() {
     setIdea("");
     setHistory([]);
     setProjects([]);
+    setSelectedProjectId("");
   };
 
   const createProject = async () => {
@@ -165,13 +181,17 @@ export default function Home() {
 
     setProjectLoading(true);
 
-    const { error } = await supabase.from("projects").insert([
-      {
-        project_name: projectName,
-        project_type: projectType,
-        user_id: user.id,
-      },
-    ]);
+    const { data, error } = await supabase
+      .from("projects")
+      .insert([
+        {
+          project_name: projectName,
+          project_type: projectType,
+          user_id: user.id,
+        },
+      ])
+      .select("id, user_id, project_name, project_type, created_at")
+      .single();
 
     setProjectLoading(false);
 
@@ -182,6 +202,11 @@ export default function Home() {
 
     setProjectName("");
     setProjectType("Dropshipping");
+
+    if (data) {
+      setSelectedProjectId(data.id);
+    }
+
     await loadProjects();
   };
 
@@ -196,7 +221,12 @@ export default function Home() {
       return;
     }
 
+    if (selectedProjectId === id) {
+      setSelectedProjectId("");
+    }
+
     await loadProjects();
+    await loadHistory();
   };
 
   const downloadPDF = () => {
@@ -259,6 +289,10 @@ export default function Home() {
   const openHistory = (item: BusinessIdea) => {
     setIdea(item.idea);
     setResult(item.result || "");
+
+    if (item.project_id) {
+      setSelectedProjectId(item.project_id);
+    }
   };
 
   const analyzeIdea = async () => {
@@ -269,6 +303,11 @@ export default function Home() {
 
     if (!idea.trim()) {
       alert("Please enter a business idea first");
+      return;
+    }
+
+    if (projects.length > 0 && !selectedProjectId) {
+      alert("Please select a project first");
       return;
     }
 
@@ -298,6 +337,7 @@ export default function Home() {
         idea,
         result: data.result,
         user_id: user.id,
+        project_id: selectedProjectId || null,
       },
     ]);
 
@@ -465,16 +505,23 @@ export default function Home() {
                   {projects.map((project) => (
                     <div
                       key={project.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl bg-black/30 px-5 py-4"
+                      className={`flex items-center justify-between gap-3 rounded-2xl px-5 py-4 ${
+                        selectedProjectId === project.id
+                          ? "border border-pink-400 bg-pink-500/10"
+                          : "bg-black/30"
+                      }`}
                     >
-                      <div>
+                      <button
+                        onClick={() => setSelectedProjectId(project.id)}
+                        className="flex-1 text-left"
+                      >
                         <h3 className="font-bold text-white">
                           {project.project_name}
                         </h3>
                         <p className="text-sm text-gray-400">
                           {project.project_type || "No type"}
                         </p>
-                      </div>
+                      </button>
 
                       <button
                         onClick={() => deleteProject(project.id)}
@@ -489,6 +536,28 @@ export default function Home() {
             )}
 
             <div className="mt-10 w-full max-w-3xl">
+              {projects.length > 0 && (
+                <div className="mb-4 text-left">
+                  <label className="mb-2 block text-sm font-bold text-pink-300">
+                    Select Project
+                  </label>
+
+                  <select
+                    className="w-full rounded-xl border border-pink-500 bg-[#1a1a1a] p-4 text-white outline-none focus:border-pink-300"
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                  >
+                    <option value="">Choose a project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.project_name} —{" "}
+                        {project.project_type || "No type"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                 {[
                   ["analyze", "📊 Business Analysis"],
@@ -543,7 +612,10 @@ export default function Home() {
                         onClick={() => openHistory(item)}
                         className="flex-1 text-left text-sm text-gray-300 hover:text-white"
                       >
-                        {item.idea}
+                        <span className="block text-white">{item.idea}</span>
+                        <span className="text-xs text-pink-300">
+                          {getProjectName(item.project_id)}
+                        </span>
                       </button>
 
                       <button
